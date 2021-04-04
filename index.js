@@ -11,7 +11,6 @@ const firebase = require("firebase");
 require("firebase/firestore");
 var admin = require("firebase-admin");
 var serviceAccount = require("./creds.json");
-const { json } = require("body-parser");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
