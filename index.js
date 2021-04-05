@@ -6,6 +6,7 @@ const fetch = require("node-fetch");
 const neatCsv = require("neat-csv");
 const cron  = require('node-cron');
 const axios = require('axios')
+const cors = require('cors')
 
 const firebase = require("firebase");
 require("firebase/firestore");
@@ -18,6 +19,7 @@ var db = admin.firestore();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cors())
 
 const PORT = process.env.PORT || 3000;
 
@@ -158,40 +160,40 @@ app.get("/schedule_test",(req,res)=>{
 
     var add_headline = new Promise((resolve,reject) => {
       db.collection('news')
-      .add({"index":"headlines_"+date,headlines_data})
+      .add({"index":"headlines_"+date,"data":headlines_data})
       .then(() => resolve("Added Headline"))
       .catch(err => reject(err))
     })
     var add_apple = new Promise((resolve,reject)=>{
       db.collection('news')
-      .add({"index":"apple_"+date,apple_data})
+      .add({"index":"apple_"+date,"data":apple_data})
       .then(() => resolve("Added Apple")).catch(err => reject(err))
     })
 
     var add_tesla = new Promise((resolve,reject)=>{
       db.collection("news")
-      .add({"index":"tesla_"+date,tesla_data})
+      .add({"index":"tesla_"+date,"data":tesla_data})
       .then(res => resolve("Added Tesla"))
       .catch(err => reject(err))
     })
 
     var add_facebook = new Promise((resolve,reject) => {
-      db.collection('news').add({"index":"facebook_"+date,facebook_data})
+      db.collection('news').add({"index":"facebook_"+date,"data":facebook_data})
       .then(() => resolve("Added Facebook")).catch(err => reject(err))
     })
 
     var add_nvidia = new Promise((resolve,reject)=>{
-      db.collection('news').add({"index":"nvidia_"+date,nvidia_data})
+      db.collection('news').add({"index":"nvidia_"+date,"data":nvidia_data})
       .then(() => resolve("Added Nvidia")).catch(err => reject(err))
     })
 
     var add_qualcomm = new Promise((resolve,reject) =>{
-      db.collection('news').add({"index":"qualcomm_"+date,qualcomm_data})
+      db.collection('news').add({"index":"qualcomm_"+date,"data":qualcomm_data})
       .then(() => resolve("Added Qualcomm")).catch(err => reject(err))
     })
 
     Promise.all([add_headline,add_apple,add_facebook,add_tesla,add_qualcomm,add_nvidia])
-    .then(data => res.json({"result_list":data}))
+    .then(data => res.json({data}))
     .catch(err => res.json({err}))
   }))
 })
@@ -227,6 +229,43 @@ app.post("/read_firebase",async (req,res)=>{
     })
   }
 })
+
+
+
+app.post("/calculate_sentiments",(req,res)=>{
+  var today = new Date();
+  var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+  db.collection("news").where("index","==",req.body.company+"_"+date)
+  .get()
+  .then(snapshot => {
+    var data = []
+    var data_array = []
+    if(snapshot.empty)
+    {
+      res.json({
+        "msg":"Index not found"
+      })
+    }
+    else{
+      snapshot.forEach(snap=>{
+        data.push(snap.data().data.articles)
+      })
+      data[0].forEach(listItem =>{
+        if(listItem.content !== null)
+        {
+          data_array.push(listItem.content)
+        }
+        else if(listItem.content === null && listItem.description !== null){
+          data_array.push(listItem.description)
+        }
+      })
+      res.json({
+        data_array
+      })
+    }
+  }).catch(err => res.json({err}))
+})
+
 
 cron.schedule("0 9 * * *",()=>{
 
@@ -265,35 +304,35 @@ cron.schedule("0 9 * * *",()=>{
 
     var add_headline = new Promise((resolve,reject) => {
       db.collection('news')
-      .add({"index":"headlines_"+date,headlines_data})
+      .add({"index":"headlines_"+date,"data":headlines_data})
       .then(() => resolve("Added Headline"))
       .catch(err => reject(err))
     })
     var add_apple = new Promise((resolve,reject)=>{
       db.collection('news')
-      .add({"index":"apple_"+date,apple_data})
+      .add({"index":"apple_"+date,"data":apple_data})
       .then(() => resolve("Added Apple")).catch(err => reject(err))
     })
 
     var add_tesla = new Promise((resolve,reject)=>{
       db.collection("news")
-      .add({"index":"tesla_"+date,tesla_data})
+      .add({"index":"tesla_"+date,"data":tesla_data})
       .then(res => resolve("Added Tesla"))
       .catch(err => reject(err))
     })
 
     var add_facebook = new Promise((resolve,reject) => {
-      db.collection('news').add({"index":"facebook_"+date,facebook_data})
+      db.collection('news').add({"index":"facebook_"+date,"data":facebook_data})
       .then(() => resolve("Added Facebook")).catch(err => reject(err))
     })
 
     var add_nvidia = new Promise((resolve,reject)=>{
-      db.collection('news').add({"index":"nvidia_"+date,nvidia_data})
+      db.collection('news').add({"index":"nvidia_"+date,"data":nvidia_data})
       .then(() => resolve("Added Nvidia")).catch(err => reject(err))
     })
 
     var add_qualcomm = new Promise((resolve,reject) =>{
-      db.collection('news').add({"index":"qualcomm_"+date,qualcomm_data})
+      db.collection('news').add({"index":"qualcomm_"+date,"data":qualcomm_data})
       .then(() => resolve("Added Qualcomm")).catch(err => reject(err))
     })
 
