@@ -272,7 +272,7 @@ app.get("/calculate_sentiments/:company", async (req,res)=>{
       let formData = new FormData();
       var data_to_be_sent = JSON.stringify(data_array);
       formData.append("sentences",data_to_be_sent)
-      fetch("http://localhost:5000/bert_financeimdb",{
+      fetch("http://20.55.103.133/bert_financeimdb",{
         method:"POST",
         body: formData
       })
