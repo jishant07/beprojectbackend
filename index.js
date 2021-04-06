@@ -113,25 +113,6 @@ app.post("/get_file", (req, res) => {
     );
 });
 
-app.get("/delete_doc",(req,res) => {
-  db.collection('asian-paints').doc("Okm2xta2qouBjRbsjgvy").delete().then(()=>res.send("OK"))
-})
-
-app.get("/test_endpoint", (req, res) => {
-  var url =
-    "https://newsapi.org/v2/everything?" +
-    "q=Apple&" +
-    "from=2021-04-02&" +
-    "sortBy=popularity&" +
-    "apiKey=187f701335b24b4c8fe92ccb0d639b43";
-  
-  fetch(url)
-  .then(res => res.json())
-  .then((body) => {
-    res.json(body)
-  })
-});
-
 
 app.get("/schedule_test",(req,res)=>{
 
@@ -300,8 +281,10 @@ app.get("/calculate_sentiments/:company", async (req,res)=>{
           "neg_percentage" : ((neg_per/total_len) * 100).toString(),
           "neu_percentage" : ((neu_per/total_len) * 100).toString()
         }).then(response =>{
-          console.log(response.id)
-          res.send("OK")
+          res.json({
+            id: response.id,
+            "msg":"Sentiment Calculated Successfully"
+          })
         })
       })
     }
