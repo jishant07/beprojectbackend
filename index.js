@@ -220,7 +220,32 @@ app.post("/read_firebase",async (req,res)=>{
   }
 })
 
-
+app.get("/get_sentiments/:company",(req,res)=>{
+  var today = new Date();
+  var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+  var company = req.params.company;
+  db.collection("sentiment_score")
+  .where("index","==",company+"_"+date)
+  .get()
+  .then(snapshot => {
+    if(snapshot.empty)
+    {
+      res.json({
+        "status":"fail",
+        "msg":"Index Not Found"
+      })
+    }
+    else{
+      var data = [];
+      snapshot.forEach(snap=>{
+        data.push(snap.data())
+      })
+      res.json({
+        data
+      })
+    }
+  })
+})
 
 app.get("/calculate_sentiments/:company", async (req,res)=>{
   console.log("REACHED HERE")
