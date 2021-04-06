@@ -7,11 +7,13 @@ const neatCsv = require("neat-csv");
 const cron  = require('node-cron');
 const axios = require('axios')
 const cors = require('cors')
+var FormData = require('form-data');
 
 const firebase = require("firebase");
 require("firebase/firestore");
 var admin = require("firebase-admin");
 var serviceAccount = require("./creds.json");
+const { response } = require("express");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -21,7 +23,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors())
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   res.send("Hello World");
@@ -239,10 +241,11 @@ app.post("/read_firebase",async (req,res)=>{
 
 
 
-app.post("/calculate_sentiments",(req,res)=>{
+app.get("/calculate_sentiments/:company", async (req,res)=>{
+  console.log("REACHED HERE")
   var today = new Date();
   var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
-  db.collection("news").where("index","==",req.body.company+"_"+date)
+  db.collection("news").where("index","==",req.params.company+"_"+date)
   .get()
   .then(snapshot => {
     var data = []
@@ -266,11 +269,46 @@ app.post("/calculate_sentiments",(req,res)=>{
           data_array.push(listItem.description)
         }
       })
-      res.json({
-        data_array
+      let formData = new FormData();
+      var data_to_be_sent = JSON.stringify(data_array);
+      formData.append("sentences",data_to_be_sent)
+      fetch("http://localhost:5000/bert_financeimdb",{
+        method:"POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        var total_len = data['prediction'].length
+        var pos_per = 0;
+        var neg_per = 0;
+        var neu_per = 0;
+        data['prediction'].forEach(prediction => {
+          if(prediction === "positive")
+          {
+            pos_per = pos_per + 1;
+          }
+          else if(prediction === "negative"){
+            neg_per = neg_per + 1;
+          }
+          else{
+            neu_per = neu_per + 1;
+          }
+        })
+        db.collection("sentiment_score").add({
+          "index" : req.params.company+"_"+date,
+          "pos_percentage" : ((pos_per/total_len) * 100).toString(),
+          "neg_percentage" : ((neg_per/total_len) * 100).toString(),
+          "neu_percentage" : ((neu_per/total_len) * 100).toString()
+        }).then(response =>{
+          console.log(response.id)
+          res.send("OK")
+        })
       })
     }
-  }).catch(err => res.json({err}))
+  }).catch(err => {
+    console.log(err)
+    res.send("ERROR")
+  })
 })
 
 
