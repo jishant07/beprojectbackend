@@ -21,13 +21,14 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors())
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.get("/", (req, res) => {
   res.send("Hello World");
 });
 
 app.post("/login", (req, res) => {
+  console.log(req.body);
   if (
     req.body.email !== "" &&
     req.body.email !== undefined &&
@@ -60,6 +61,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/signup", (req, res) => {
+  console.log(req.body)
   if (
     req.body.email !== "" &&
     req.body.email !== undefined &&
@@ -72,7 +74,7 @@ app.post("/signup", (req, res) => {
       .then((snapshot) => {
         if (snapshot.empty) {
           db.collection("users")
-            .add({ email: req.body.email, password: md5(req.body.password) })
+            .add({ email: req.body.email, password: md5(req.body.password),firstname:req.body.firstname,lastname:req.body.lastname })
             .then((response) => {
               res.json({
                 status: "success",
@@ -97,16 +99,21 @@ app.post("/signup", (req, res) => {
 
 app.post("/get_file", (req, res) => {
   var file_location = req.body.file_location;
+  console.log(file_location)
   fetch(file_location)
     .then((res) => res.text())
     .then((body) =>
       neatCsv(body).then((parsedData) => {
         res.json({
-          data: parsedData,
-        });
+          "data":parsedData.splice(parsedData.length-50)
+        })
       })
     );
 });
+
+app.get("/delete_doc",(req,res) => {
+  db.collection('asian-paints').doc("Okm2xta2qouBjRbsjgvy").delete().then(()=>res.send("OK"))
+})
 
 app.get("/test_endpoint", (req, res) => {
   var url =
