@@ -514,92 +514,109 @@ cron.schedule(
 );
 
 const sentiment_calculator = (company_name) => {
-  console.log("REACHED HERE");
-  var today = new Date();
-  var date =
-    today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
-  db.collection("news")
-    .where("index", "==", company_name + "_" + date)
-    .get()
-    .then((snapshot) => {
-      var data = [];
-      var data_array = [];
-      if (snapshot.empty) {
-        console.log("Index Not Found");
-      } else {
-        snapshot.forEach((snap) => {
-          data.push(snap.data().data.articles);
-        });
-        data[0].forEach((listItem) => {
-          if (listItem.content !== null) {
-            data_array.push(listItem.content);
-          } else if (
-            listItem.content === null &&
-            listItem.description !== null
-          ) {
-            data_array.push(listItem.description);
-          }
-        });
-        let formData = new FormData();
-        var data_to_be_sent = JSON.stringify(data_array);
-        formData.append("sentences", data_to_be_sent);
-        fetch("http://20.55.103.133/bert_financeimdb", {
-          method: "POST",
-          body: formData,
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            var total_len = data["prediction"].length;
-            var pos_per = 0;
-            var neg_per = 0;
-            var neu_per = 0;
-            data["prediction"].forEach((prediction) => {
-              if (prediction === "positive") {
-                pos_per = pos_per + 1;
-              } else if (prediction === "negative") {
-                neg_per = neg_per + 1;
-              } else {
-                neu_per = neu_per + 1;
-              }
-            });
-            db.collection("sentiment_score")
-              .add({
-                index: company_name + "_" + date,
-                pos_percentage: ((pos_per / total_len) * 100).toString(),
-                neg_percentage: ((neg_per / total_len) * 100).toString(),
-                neu_percentage: ((neu_per / total_len) * 100).toString(),
-              })
-              .then((response) => {
-                console.log(response.id);
-              });
+  return new Promise((resolve, reject) => {
+    console.log("REACHED HERE");
+    var today = new Date();
+    var date =
+      today.getFullYear() +
+      "-" +
+      (today.getMonth() + 1) +
+      "-" +
+      today.getDate();
+    db.collection("news")
+      .where("index", "==", company_name + "_" + date)
+      .get()
+      .then((snapshot) => {
+        var data = [];
+        var data_array = [];
+        if (snapshot.empty) {
+          reject("Index not found");
+        } else {
+          snapshot.forEach((snap) => {
+            data.push(snap.data().data.articles);
           });
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      return;
-    });
+          data[0].forEach((listItem) => {
+            if (listItem.content !== null) {
+              data_array.push(listItem.content);
+            } else if (
+              listItem.content === null &&
+              listItem.description !== null
+            ) {
+              data_array.push(listItem.description);
+            }
+          });
+          let formData = new FormData();
+          var data_to_be_sent = JSON.stringify(data_array);
+          formData.append("sentences", data_to_be_sent);
+          fetch("http://20.55.103.133/bert_financeimdb", {
+            method: "POST",
+            body: formData,
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              var total_len = data["prediction"].length;
+              var pos_per = 0;
+              var neg_per = 0;
+              var neu_per = 0;
+              data["prediction"].forEach((prediction) => {
+                if (prediction === "positive") {
+                  pos_per = pos_per + 1;
+                } else if (prediction === "negative") {
+                  neg_per = neg_per + 1;
+                } else {
+                  neu_per = neu_per + 1;
+                }
+              });
+              db.collection("sentiment_score")
+                .add({
+                  index: company_name + "_" + date,
+                  pos_percentage: ((pos_per / total_len) * 100).toString(),
+                  neg_percentage: ((neg_per / total_len) * 100).toString(),
+                  neu_percentage: ((neu_per / total_len) * 100).toString(),
+                })
+                .then((response) => {
+                  resolve(response.id);
+                });
+            });
+        }
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
 };
 
 app.get("/test_endpoint", (req, res) => {
-  sentiment_calculator("facebook");
-  sentiment_calculator("qualcomm");
-  sentiment_calculator("nvidia");
-  sentiment_calculator("apple");
-  sentiment_calculator("tesla");
-  sentiment_calculator("headlines");
-  res.send("OK");
+  Promise.all([
+    sentiment_calculator("facebook"),
+    sentiment_calculator("tesla"),
+    sentiment_calculator("apple"),
+    sentiment_calculator("headlines"),
+    sentiment_calculator("qualcomm"),
+    sentiment_calculator("nvidia"),
+  ])
+    .then((response) => {
+      console.log(response);
+      res.send("OK");
+    })
+    .catch((err) => console.log(err));
 });
 
 cron.schedule(
-  "5 9 * * *",
+  "2 9 * * *",
   () => {
-    sentiment_calculator("facebook");
-    sentiment_calculator("qualcomm");
-    sentiment_calculator("nvidia");
-    sentiment_calculator("apple");
-    sentiment_calculator("tesla");
-    sentiment_calculator("headlines");
+    Promise.all([
+      sentiment_calculator("facebook"),
+      sentiment_calculator("tesla"),
+      sentiment_calculator("apple"),
+      sentiment_calculator("headlines"),
+      sentiment_calculator("qualcomm"),
+      sentiment_calculator("nvidia"),
+    ])
+      .then((response) => {
+        console.log(response);
+      })
+      .catch((err) => console.log(err));
   },
   {
     scheduled: true,
