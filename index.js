@@ -104,18 +104,26 @@ app.post("/signup", (req, res) => {
   }
 });
 
-app.post("/get_file", (req, res) => {
-  var file_location = req.body.file_location;
-  console.log(file_location);
-  fetch(file_location)
-    .then((res) => res.text())
-    .then((body) =>
-      neatCsv(body).then((parsedData) => {
+app.get("/get_finance_data/:company_name", (req, res) => {
+  db.collection("finance-data")
+    .where("company_name", "==", req.params.company_name)
+    .get()
+    .then((snapshot) => {
+      if (snapshot.empty) {
         res.json({
-          data: parsedData.splice(parsedData.length - 50),
+          msg: "Index Not found",
+          status: "Error",
         });
-      })
-    );
+      } else {
+        var data = [];
+        snapshot.forEach((snap) => {
+          data.push(snap.data());
+        });
+        res.json({
+          company_data: data,
+        });
+      }
+    });
 });
 
 app.get("/schedule_test", (req, res) => {
@@ -374,6 +382,32 @@ app.get("/calculate_sentiments/:company", async (req, res) => {
       res.send("ERROR");
     });
 });
+
+// app.get("/get_finance_data", (req, res) => {
+//   var options = {
+//     method: "GET",
+//     url:
+//       "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-historical-data",
+//     params: { symbol: "NVDA", region: "US" },
+//     headers: {
+//       "x-rapidapi-key": "5de4663a73msh76681a12c42e7bbp16ebe5jsn46e5946f2d1c",
+//       "x-rapidapi-host": "apidojo-yahoo-finance-v1.p.rapidapi.com",
+//     },
+//   };
+
+//   axios
+//     .request(options)
+//     .then(function (response) {
+//       db.collection("finance-data")
+//         .add({ data: response.data.prices, company_name: "nvidia" })
+//         .then((data) => {
+//           res.json({ data: response.data.prices, id: data.id });
+//         });
+//     })
+//     .catch(function (error) {
+//       console.error(error);
+//     });
+// });
 
 cron.schedule(
   "0 9 * * *",
