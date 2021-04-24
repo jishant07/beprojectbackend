@@ -126,6 +126,20 @@ app.get("/get_finance_data/:company_name", (req, res) => {
     });
 });
 
+app.post("/get_file", (req, res) => {
+  var file_location = req.body.file_location;
+  console.log(file_location);
+  fetch(file_location)
+    .then((res) => res.text())
+    .then((body) =>
+      neatCsv(body).then((parsedData) => {
+        res.json({
+          data: parsedData.splice(parsedData.length - 50),
+        });
+      })
+    );
+});
+
 app.get("/schedule_test", (req, res) => {
   var today = new Date();
   var date =
